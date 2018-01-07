@@ -1,0 +1,305 @@
+---
+title: "Different Filters"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+#avalik1 contains data about years 2016-2017
+avalik1 <- read.csv2('avalik_1.csv', sep ='\t', encoding = 'UTF-8')
+#seventeenonly contains data from
+seventeenonly <- filter(avalik1, substr(avalik1$ToimKpv,1,4) == '2017')
+#avalik2 contains data about years 2012-2016
+avalik2 <- read.csv2('avalik_2.csv', sep ='\t', encoding = 'UTF-8')
+```
+## Notation
+n is often used to denote a number of counted entities.
+
+
+# Grouping criminal activity by hours
+
+## Year 2017
+The misdemeanor reportings having been grouped by the hour, at which they happened gave the following results. 
+
+```{r, echo=FALSE}
+#Remove rows with no information about the time
+so_new <- data.frame(filter(seventeenonly, !(seventeenonly$ToimKell=='')))
+#Grouping misdemeanor by hours
+seventeenonly_by_hour <- count(so_new, "Hour" = substr(so_new$ToimKell, 1, 2))
+print("Most active hours")
+head(seventeenonly_by_hour[order(-seventeenonly_by_hour$n),], 4)
+print("Least active hours")
+head(seventeenonly_by_hour[order(seventeenonly_by_hour$n),], 4)
+```
+A graphical visualisation displays the following:
+
+```{r, echo=FALSE}
+#Grouping misdemeanor by hours
+seventeenonly_hour_rate_t <- prop.table(table("Hour" = substr(so_new$ToimKell, 1, 2))) 
+seventeenonly_hour_rate <- data.frame(seventeenonly_hour_rate_t, row.names = names(seventeenonly_hour_rate_t))
+```
+
+```{r, echo=FALSE}
+ggplot(data=seventeenonly_hour_rate, aes(x=Hour, y=Freq)) +
+   geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+   guides(fill=FALSE) +
+   xlab("Hour") + ylab("Probability of a misdemeanor happening") +
+   ggtitle("Distribution of reported cases during the day")
+```
+
+## Previous years
+The misdemeanor reportings having been grouped by the hour, at which they happened gave the following results. 
+
+```{r, echo=FALSE}
+#Remove rows with no information about the time
+avalik2_new <- data.frame(filter(avalik2, !(avalik2$ToimKell=='')))
+#Group by hour
+avalik2_by_hour <- count(avalik2_new, "Hour" = substr(ToimKell, 1, 2))
+print("Most active hours")
+head(avalik2_by_hour[order(-avalik2_by_hour$n),], 4)
+print("Least active hours")
+head(avalik2_by_hour[order(avalik2_by_hour$n),],4)
+```
+
+A graphical visualisation displays the following:
+
+```{r, echo=FALSE}
+avalik2_hour_rate_t <- prop.table(table("Hour" = substr(avalik2_new$ToimKell, 1, 2)))
+avalik2_hour_rate <- data.frame(avalik2_hour_rate_t, row.names = names(avalik2_hour_rate_t))
+```
+
+```{r, echo=FALSE}
+ggplot(data=avalik2_hour_rate, aes(x=Hour, y=Freq)) +
+   geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+   guides(fill=FALSE) +
+   xlab("Hour") + ylab("Probability of a misdemeanor happening") +
+   ggtitle("Distribution of reported cases during the day 2012-2016")
+
+```
+
+## Conclusion
+
+The most active hours are around 17 o'clock. The least are at 6 in the morning.
+There have been no major changes to the distribution of the rate of criminal activity.
+
+# Grouping by type of misdemeanor
+In the original data, each row contained one or more classifiers. 
+## Year 2017
+
+```{r, echo=FALSE}
+misdemeanor_types_all <- unlist(strsplit(as.character(seventeenonly$SyndmusLiik), ","))
+misdemeanor_types <- unique(misdemeanor_types_all)
+
+table_of_misdemeanortype_freq <- table("Frequency distribution of misdemeanor types" = misdemeanor_types_all)
+table_misdemeanortype_freq_perc <- prop.table(table_of_misdemeanortype_freq) %>% `*`(100) %>% round(2)
+
+table_of_misdemeanortype_freq
+
+print("Five most frequent types of misdemeanor cases by percentage")
+sort(table_misdemeanortype_freq_perc,decreasing=TRUE)[1:5]
+```
+
+## Years 2012-2016
+
+```{r, echo=FALSE}
+misdemeanor_types_all2 <- unlist(strsplit(as.character(avalik2$SyndmusLiik), ","))
+misdemeanor_types2 <- unique(misdemeanor_types_all2)
+table_of_misdemeanortype_freq2 <- table("Frequency distribution of misdemeanor types" = misdemeanor_types_all2)
+table_misdemeanortype_freq_perc2 <- prop.table(table_of_misdemeanortype_freq2) %>% `*`(100) %>% round(2)
+
+table_of_misdemeanortype_freq2
+
+print("Five most frequent types of misdemeanor cases by percentage")
+sort(table_misdemeanortype_freq_perc2,decreasing=TRUE)[1:5]
+
+```
+# Misdemeanor cases by days
+# Year 2017
+```{r, echo=FALSE}
+seventeenonly_group_paev <- count(seventeenonly, seventeenonly$ToimNadalapaev)
+
+#ggplot(data=seventeenonly_group_paev, aes(x=seventeenonly_group_paev$`seventeenonly$ToimNadalapaev`, y=seventeenonly_group_paev$n)) +
+#  geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+#  guides(fill=FALSE) +
+#  xlab("Day of week") + ylab("Number of offences") +
+#  ggtitle("Comparison of misdemeanor by day")
+
+x <- c("Esmaspäev","Teisipäev","Kolmapäev","Neljapäev","Reede","Lapäev","Pühapäev")
+tr <- c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
+
+kkkk <- prop.table(table(seventeenonly$ToimNadalapaev))
+names(kkkk) <- c("Monday","Wednesday","Saturday","Thursday","Sunday","Friday","Tuesday")
+from_table <- data.frame(kkkk, row.names = names(kkkk))
+from_table2 <- rbind(from_table[1,],from_table[7,],from_table[2,],from_table[4,],from_table[6,],from_table[3,],from_table[5,])
+```
+
+```{r, echo=FALSE}
+ggplot(data= from_table2, aes(x=Var1, y=Freq )) +
+   geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+   guides(fill=FALSE) +
+   xlab("Day of week") + ylab("Probability of a misdemeanor happening") +
+   ggtitle("Distribution of reported cases by weekday 2017") + scale_x_discrete(limits=tr)
+```
+
+
+
+# Years 2012-2016
+```{r, echo=FALSE}
+x <- c("Esmaspäev","Teisipäev","Kolmapäev","Neljapäev","Reede","Lapäev","Pühapäev")
+tr <- c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
+
+kkkk2 <- prop.table(table(avalik2$ToimNadalapaev))
+names(kkkk2) <- c("Monday","Wednesday","Saturday","Thursday","Sunday","Friday","Tuesday")
+from_table3 <- data.frame(kkkk2, row.names = names(kkkk2))
+from_table33 <- rbind(from_table3[1,],from_table3[7,],from_table3[2,],from_table3[4,],from_table3[6,],from_table3[3,],from_table3[5,])
+```
+
+```{r, echo=FALSE}
+ggplot(data= from_table33, aes(x=Var1, y=Freq )) +
+   geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+   guides(fill=FALSE) +
+   xlab("Day of week") + ylab("Probability of a misdemeanor happening") +
+   ggtitle("Distribution of reported cases by weekday 2012-2016") + scale_x_discrete(limits=tr)
+```
+
+
+# Monetary loss caused by misdemeanor
+The following section displays the monetary loss caused by misdemeanor.
+## 2017
+
+```{r, echo=FALSE}
+losses_2017 <- count(seventeenonly, "Loss during 2017"=Kahjusumma)
+prev_losses <- count(avalik2, "Loss during 2012-2016"=avalik2$Kahjusumma)
+
+prop.table(table("Loss"=seventeenonly$Kahjusumma))
+
+losses_2017
+```
+
+
+## 2012 - 2016
+
+```{r, echo=FALSE}
+prop.table(table("Loss during 2012-2016"=avalik2$Kahjusumma))
+
+prev_losses
+```
+
+
+# Places where misdemeanor took place
+## 2017
+```{r, echo=FALSE}
+mdm_by_place_all <- unlist(strsplit(as.character(seventeenonly$KohtLiik), ","))
+
+table_of_mdm_by_place <- table("Frequency distribution of misdemeanor cases by place" = mdm_by_place_all)
+
+table_of_mdm_by_place_freq <- prop.table(table_of_mdm_by_place)  %>% `*`(100) %>% round(2)
+table_of_mdm_by_place_freq
+print("Probabilistically three most frequent places where offense might take place")
+sort(table_of_mdm_by_place_freq,decreasing=TRUE)[1:3]
+```
+
+## 2012 - 2016
+```{r, echo=FALSE}
+mdm_by_place2_all <- unlist(strsplit(as.character(avalik2$KohtLiik), ","))
+
+table_of_mdm_by_place2 <- table("Frequency distribution of misdemeanor cases by place" = mdm_by_place2_all)
+table_of_mdm_by_place2_freq <- prop.table(table_of_mdm_by_place2)  %>% `*`(100) %>% round(2)
+table_of_mdm_by_place2_freq
+print("Probabilistically three most frequent places where offense might take place")
+sort(table_of_mdm_by_place2_freq,decreasing=TRUE)[1:3]
+```
+
+
+# Misdemeanor rate by month
+
+```{r, echo=FALSE}
+a_by_ym <- count(seventeenonly, "Year and month" = substr(seventeenonly$ToimKpv,1,6))
+b_by_ym <- count(avalik2, "Year and month" = substr(avalik2$ToimKpv,1,6))
+all_by_ym <- rbind( a_by_ym, b_by_ym)
+
+all_all <- rbind( seventeenonly, avalik2)
+mdm_by_month <- table(substr(all_all$ToimKpv,1,7))
+mdm_by_month_rate <- prop.table(mdm_by_month)
+mdm_by_month_rate_table <- data.frame(mdm_by_month_rate, row.names = names(mdm_by_month_rate))
+```
+
+```{r, echo=FALSE}
+ggplot(data=mdm_by_month_rate_table[1:12,], aes(x=Var1, y=Freq)) +
+  geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+  guides(fill=FALSE) +
+  xlab("Year and month") + ylab("rate of offense") +
+  ggtitle("Misdemeanor rate by month through 2012") +
+  coord_flip()
+```
+
+```{r, echo=FALSE}
+ggplot(data=mdm_by_month_rate_table[13:24,], aes(x=Var1, y=Freq)) +
+  geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+  guides(fill=FALSE) +
+  xlab("Year and month") + ylab("rate of offense") +
+  ggtitle("Misdemeanor rate by month through 2013") +
+  coord_flip()
+```
+
+```{r, echo=FALSE}
+ggplot(data=mdm_by_month_rate_table[25:36,], aes(x=Var1, y=Freq)) +
+  geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+  guides(fill=FALSE) +
+  xlab("Year and month") + ylab("rate of offense") +
+  ggtitle("Misdemeanor rate by month through 2014") +
+  coord_flip()
+```
+
+```{r, echo=FALSE}
+ggplot(data=mdm_by_month_rate_table[37:48,], aes(x=Var1, y=Freq)) +
+  geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+  guides(fill=FALSE) +
+  xlab("Year and month") + ylab("rate of offense") +
+  ggtitle("Misdemeanor rate by month through 2015") +
+  coord_flip()
+```
+
+```{r, echo=FALSE}
+ggplot(data=mdm_by_month_rate_table[49:60,], aes(x=Var1, y=Freq)) +
+  geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+  guides(fill=FALSE) +
+  xlab("Year and month") + ylab("rate of offense") +
+  ggtitle("Misdemeanor rate by month through 2016") +
+  coord_flip()
+```
+
+```{r, echo=FALSE}
+ggplot(data=mdm_by_month_rate_table[61:72,], aes(x=Var1, y=Freq)) +
+  geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+  guides(fill=FALSE) +
+  xlab("Year and month") + ylab("rate of offense") +
+  ggtitle("Misdemeanor rate by month through 2017") +
+  coord_flip()
+```
+
+```{r, echo=FALSE}
+ggplot(data=mdm_by_month_rate_table, aes(x=Var1, y=Freq)) +
+  geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+  guides(fill=FALSE) +
+  xlab("Year and month") + ylab("rate of offense") +
+  ggtitle("All from 2012 to 2017 for nice comparison") +
+  coord_flip()
+```
+
+# Rate of misdemeanor cases by month
+
+```{r, echo=FALSE}
+mdm_by_month2 <- table(substr(avalik2$ToimKpv,6,7))
+mdm_by_month_rate2 <- prop.table(mdm_by_month2)
+mdm_by_month_rate_table2 <- data.frame(mdm_by_month_rate2, row.names = names(mdm_by_month_rate2))
+
+ggplot(data=mdm_by_month_rate_table2, aes(x=Var1, y=Freq)) +
+  geom_bar(colour="black", fill="#DD8888", width=.8, stat="identity") +
+  guides(fill=FALSE) +
+  xlab("Month") + ylab("Probability of a misdemeanor happening") +
+  
+  ggtitle("Distribution of reported cases by month (2012-2016)") 
+```
