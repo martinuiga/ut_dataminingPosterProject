@@ -1,0 +1,170 @@
+---
+title: "map_visual_misdemeanor"
+---
+
+Leaflet is one of the most popular open-source JavaScript libraries for interactive maps.
+```{r}
+install.packages("leaflet")
+```
+
+```{r}
+library(dplyr)
+library(leaflet)
+```
+
+Read in the dataset that has been filtered and modified (modifications done using lest_to_geo.py). Filter out years 2012 and 2016.
+```{r}
+avalik2 <- read.csv2('output_2012_2016.csv', sep =',')
+avalik2_2016 <- filter(avalik2, (grepl("^2016", as.character(avalik2$ToimKpv))))
+avalik2_2012 <- filter(avalik2, (grepl("^2012", as.character(avalik2$ToimKpv))))
+```
+
+Count cases for each MaakondNimetus (County) for both years. Calculate each county's proportion from total.
+```{r}
+
+avalik2_by_county_2016 <- avalik2_2016 %>% group_by(MaakondNimetus) %>% summarise (n = n()) %>% mutate(freq = n / sum(n))
+avalik2_by_county_2016 <- filter(avalik2_by_county_2016, !avalik2_by_county_2016$MaakondNimetus=='')
+avalik2_by_county_2016$long <- c("24.7536","22.7468","27.4137","26.3972","25.5699","26.3653","23.5371","27.0549","24.4966","24.7942","22.4850","26.7290","26.0315","25.5974","26.9987")
+avalik2_by_county_2016$lat <- c("59.4370","58.9982","59.3573","58.7463","58.8871","59.3466","58.9482","58.0537","58.3858","59.0057","58.2529","58.3776","57.7771","58.3671","57.8461")
+sum(avalik2_by_county_2016$n)
+
+
+avalik2_by_county_2012 <- avalik2_2012 %>% group_by(MaakondNimetus) %>% summarise (n = n()) %>% mutate(freq = n / sum(n))
+avalik2_by_county_2012 <- filter(avalik2_by_county_2012, !avalik2_by_county_2012$MaakondNimetus=='')
+avalik2_by_county_2012$long <- c("24.7536","22.7468","27.4137","26.3972","25.5699","26.3653","23.5371","27.0549","24.4966","24.7942","22.4850","26.7290","26.0315","25.5974","26.9987")
+avalik2_by_county_2012$lat <- c("59.4370","58.9982","59.3573","58.7463","58.8871","59.3466","58.9482","58.0537","58.3858","59.0057","58.2529","58.3776","57.7771","58.3671","57.8461")
+sum(avalik2_by_county_2012$n)
+```
+
+# Comparison on offence cases by county in Estonia described on a map (2012)
+Creating a map widget by calling leaflet().
+To modify the map widget we add layers (addCircles). Circles are added to each county's capital with the size related to its proportion from the total number of misdemeanor cases in that county.
+PopUp labels show the number of misdemeanor cases for that county in a particular year.
+Map style is chosen with addProviderTiles().
+```{r}
+leaflet() %>% addTiles() %>% addCircles(lng=as.numeric(as.character(avalik2_by_county_2012$long)), lat=as.numeric(as.character(avalik2_by_county_2012$lat)), radius=7500 + as.numeric(as.character(avalik2_by_county_2012$freq)) * 10000, color="red", weight=0, fillOpacity = 0.5, label = as.character(avalik2_by_county_2012$n),
+    labelOptions = labelOptions(noHide = T)) %>% addProviderTiles(providers$Stamen.Toner)
+```
+
+
+# Comparison on offence cases by county in Estonia described on a map (2016)
+Creating a map widget by calling leaflet().
+To modify the map widget we add layers (addCircles). Circles are added to each county's capital with the size related to its proportion from the total number of misdemeanor cases in that county.
+PopUp labels show the number of misdemeanor cases for that county in a particular year.
+Map style is chosen with addProviderTiles().
+```{r}
+leaflet() %>% addTiles() %>% addCircles(lng=as.numeric(as.character(avalik2_by_county_2016$long)), lat=as.numeric(as.character(avalik2_by_county_2016$lat)), radius=7500 + as.numeric(as.character(avalik2_by_county_2016$freq)) * 10000, color="red", weight=0, fillOpacity = 0.5, label = as.character(avalik2_by_county_2016$n),
+    labelOptions = labelOptions(noHide = T)) %>% addProviderTiles(providers$Stamen.Toner)
+```
+Some notable differences:
+The number has decreased for Ida-Virumaa county, but has significally increased for Harjumaa. The reasons for this could be changes in the countys population, increasing number of tourists or changes in people's behavior and police's work.
+
+
+Next, we create maps that have all individual misdemeanor cases marked with rectangles. For that, we need to separate both the X and Y coordinate ranges to get 4 points that make up a rectangular area (just how police marks them).
+```{r}
+library(tidyr)
+
+avalik2_map_2016 <- avalik2_2016 %>% separate(Lest_X, c("x1","x2"), '-')
+avalik2_map_2016 <- avalik2_map_2016 %>% separate(Lest_Y, c("y1","y2"), '-')
+
+avalik2_map_2012 <- avalik2_2012 %>% separate(Lest_X, c("x1","x2"), '-')
+avalik2_map_2012 <- avalik2_map_2012 %>% separate(Lest_Y, c("y1","y2"), '-')
+```
+
+Put each misdemeanor case on the map (2012).
+lng1, lng2, lat1, lat2 all represent geographical coordinates. Less transparent rectangles mean that those areas have higher rate of misdemeanor cases reported.
+```{r}
+leaflet() %>% addTiles() %>%
+  addRectangles(
+    lng1=as.numeric(as.character(avalik2_map_2012[["y1"]])), lat1=as.numeric(as.character(avalik2_map_2012[["x1"]])),
+    lng2=as.numeric(as.character(avalik2_map_2012[["y2"]])), lat2=as.numeric(as.character(avalik2_map_2012[["x2"]])),
+    fillColor = "red",
+    fillOpacity = 0.1,
+    weight = 0
+  ) %>% addProviderTiles(providers$Stamen.Toner)
+```
+
+Put each misdemeanor case on the map (2016).
+lng1, lng2, lat1, lat2 all represent geographical coordinates. Less transparent rectangles mean that those areas have higher rate of misdemeanor cases reported.
+```{r}
+leaflet() %>% addTiles() %>%
+  addRectangles(
+    lng1=as.numeric(as.character(avalik2_map_2016[["y1"]])), lat1=as.numeric(as.character(avalik2_map_2016[["x1"]])),
+    lng2=as.numeric(as.character(avalik2_map_2016[["y2"]])), lat2=as.numeric(as.character(avalik2_map_2016[["x2"]])),
+    fillColor = "red",
+    fillOpacity = 0.1,
+    weight = 0
+  ) %>% addProviderTiles(providers$Stamen.Toner)
+```
+
+Calculating how many instances overlap for each circle.
+```{r}
+g_by_latlon_2012 <- count(avalik2_map_2012, x1 = avalik2_map_2012$x1, y1 = avalik2_map_2012$y1)
+g_by_latlon_2012 <- g_by_latlon_2012[3:nrow(g_by_latlon_2012),]
+```
+```{r}
+g_by_latlon_2016 <- count(avalik2_map_2016, x1 = avalik2_map_2016$x1, y1 = avalik2_map_2016$y1)
+g_by_latlon_2016 <- g_by_latlon_2016[3:nrow(g_by_latlon_2016),]
+```
+
+Calculating how many instances overlap for each rectangle.
+```{r}
+g_by_latlon_rect_2012 <- count(avalik2_map_2012, x1 = avalik2_map_2012$x1, y1 = avalik2_map_2012$y1, x2 = avalik2_map_2012$x2, y2 = avalik2_map_2012$y2)
+g_by_latlon_rect_2012 <- g_by_latlon_rect_2012[3:nrow(g_by_latlon_rect_2012),]
+```
+```{r}
+g_by_latlon_rect_2016 <- count(avalik2_map_2012, x1 = avalik2_map_2012$x1, y1 = avalik2_map_2012$y1, x2 = avalik2_map_2012$x2, y2 = avalik2_map_2012$y2)
+g_by_latlon_rect_2016 <- g_by_latlon_rect_2016[3:nrow(g_by_latlon_rect_2016),]
+```
+
+
+Another visualization type we tried. This uses single point circles instead of rectangles. 
+```{r}
+leaflet() %>% addTiles() %>%
+  addCircles(
+    lng=as.numeric(as.character(g_by_latlon_2012[["y1"]])), lat=as.numeric(as.character(g_by_latlon_2012[["x1"]])),
+    fillColor = "red",
+    fillOpacity = 0.1 + 0.75*(g_by_latlon_2012$n / 200), radius = 200,
+    weight = 0,
+    label = as.character(g_by_latlon_2012$n),
+    labelOptions = labelOptions(noHide = T)
+  ) %>% addProviderTiles(providers$Stamen.Toner)
+```
+```{r}
+leaflet() %>% addTiles() %>%
+  addCircles(
+    lng=as.numeric(as.character(g_by_latlon_2016[["y1"]])), lat=as.numeric(as.character(g_by_latlon_2016[["x1"]])),
+    fillColor = "red",
+    fillOpacity = 0.1 + 0.75*(g_by_latlon_2016$n / 200), radius = 200,
+    weight = 0,
+    label = as.character(g_by_latlon_2016$n),
+    labelOptions = labelOptions(noHide = T)
+  ) %>% addProviderTiles(providers$Stamen.Toner)
+```
+
+
+Map where areas are represented by rectangles. PopUp labels show the number of overlapping cases for that specific area. Less transparent rectangles represent areas that had more reported misdemeanor cases.
+```{r}
+leaflet() %>% addTiles() %>%
+  addRectangles(
+    lng1=as.numeric(as.character(g_by_latlon_rect_2012[["y1"]])), lat1=as.numeric(as.character(g_by_latlon_rect_2012[["x1"]])),
+    lng2=as.numeric(as.character(g_by_latlon_rect_2012[["y2"]])), lat2=as.numeric(as.character(g_by_latlon_rect_2012[["x2"]])),
+    fillColor = "red",
+    fillOpacity = 0.2 + 0.6*(g_by_latlon_rect_2012$n / 200),
+    weight = 0,
+    label = as.character(g_by_latlon_rect_2012$n),
+    labelOptions = labelOptions(noHide = T)
+  ) %>% addProviderTiles(providers$Stamen.Toner)
+```
+```{r}
+leaflet() %>% addTiles() %>%
+  addRectangles(
+    lng1=as.numeric(as.character(g_by_latlon_rect_2016[["y1"]])), lat1=as.numeric(as.character(g_by_latlon_rect_2016[["x1"]])),
+    lng2=as.numeric(as.character(g_by_latlon_rect_2016[["y2"]])), lat2=as.numeric(as.character(g_by_latlon_rect_2016[["x2"]])),
+    fillColor = "red",
+    fillOpacity = 0.2 + 0.6*(g_by_latlon_rect_2016$n / 200),
+    weight = 0,
+    label = as.character(g_by_latlon_rect_2016$n),
+    labelOptions = labelOptions(noHide = T)
+  ) %>% addProviderTiles(providers$Stamen.Toner)
+```
